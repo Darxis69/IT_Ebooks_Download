@@ -67,6 +67,10 @@ def get_download_size_string(size_in_bytes):
     return "{0:.2f}".format(round(size, 2)) + " " + size_suffixes[size_suffix_index]
 
 
+def replace_invalid_path_characters(path):
+    return path.replace(':', ' -').replace('/', '_')
+
+
 def download_ebook_by_id(ebook_id, directory):
     download_url = get_ebook_download_link(ebook_id)
     request = urllib.request.Request(download_url)
@@ -78,7 +82,7 @@ def download_ebook_by_id(ebook_id, directory):
 
     extract_file_name_re = re.compile(r'"(.*?)"')
     file_name = extract_file_name_re.findall(content_disposition_header_value)[0]
-    file_name = file_name.replace(':', ' -')
+    file_name = replace_invalid_path_characters(file_name)
     file_path = directory + file_name
 
     print("Ebook ID: " + str(
