@@ -99,6 +99,17 @@ def download_ebook_by_id(ebook_id, directory):
     print("OK\n")
 
 
+def ebook_exists(ebook_id):
+    ebook_url = get_ebook_url_by_id(ebook_id)
+    parser = etree.HTMLParser()
+    tree = etree.parse(ebook_url, parser)
+    download_urls = tree.xpath(
+        "/html/body/table/tr/td/div/table/tr/td/table/tr/td/a[../../td[1]/text() = 'Download:']/@href")
+    if len(download_urls) < 1:
+        return False
+    return True
+
+
 def main():
     first_ebook_id = None
 
@@ -116,6 +127,9 @@ def main():
         ebook_dir_path = root_directory + str(ebook_id) + "/"
         if not os.path.exists(ebook_dir_path):
             os.makedirs(ebook_dir_path)
-        retry(download_ebook_by_id, max_retries, ebook_id, ebook_dir_path)
+        if ebook_exists(ebook_id):
+            retry(download_ebook_by_id, max_retries, ebook_id, ebook_dir_path)
+        else:
+            print("Ebook ID " + str(ebook_id) + " doesn't exists.")
 
 main()
