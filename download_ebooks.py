@@ -1,11 +1,14 @@
 import re
-from lxml import etree
 import os
 import urllib.request
+import urllib.error
+
+from lxml import etree
+
 
 base_url = "http://www.it-ebooks.info/"
-
 root_directory = "ebooks/"
+max_retries = 2 ** 64
 
 
 def get_max_ebook_id():
@@ -31,30 +34,60 @@ def get_ebook_download_link(ebook_id):
     return download_url
 
 
+def get_download_size_string(size_in_bytes):
+    size = size_in_bytes
+    size_suffixes = ["B", "KB", "MB", "GB", "TB", "PB"]
+    size_suffix_index = 0
+    while size > 1024:
+        size /= 1024
+        size_suffix_index += 1
+
+    return "{0:.2f}".format(round(size, 2)) + " " + size_suffixes[size_suffix_index]
+
+
 def download_ebook_by_id(ebook_id, directory):
-    download_url = get_ebook_download_link(ebook_id)
-    request = urllib.request.Request(download_url)
-    request.add_header('Referer', get_ebook_url_by_id(ebook_id))
-    response = urllib.request.urlopen(request)
+    current_try = 1
+    while current_try < max_retries:
+        # noinspection PyBroadException
+        try:
+            download_url = get_ebook_download_link(ebook_id)
+            request = urllib.request.Request(download_url)
+            request.add_header('Referer', get_ebook_url_by_id(ebook_id))
+            response = urllib.request.urlopen(request)
 
-    content_disposition_header_value = response.getheader("Content-disposition")
+            content_disposition_header_value = response.getheader("Content-disposition")
+            file_size = int(response.getheader("Content-Length"))
 
-    extract_file_name_re = re.compile(r'"(.*?)"')
-    file_name = extract_file_name_re.findall(content_disposition_header_value)[0]
-    file_path = directory + file_name
+            extract_file_name_re = re.compile(r'"(.*?)"')
+            file_name = extract_file_name_re.findall(content_disposition_header_value)[0]
+            file_name = file_name.replace(':', ' -')
+            file_path = directory + file_name
 
-    file_size_downloaded = 0
-    block_size = 8192
+            print("Ebook ID: " + str(
+                ebook_id) + ". File name: '" + file_name + "'. File size: " + get_download_size_string(
+                file_size))
+            print('Downloading... ', end="", flush=True)
 
-    file = open(file_path, "wb")
-    while True:
-        buffer = response.read(block_size)
-        if not buffer:
-            break
+            file_size_downloaded = 0
+            block_size = 8192
 
-        file_size_downloaded += len(buffer)
-        file.write(buffer)
-    file.close()
+            file = open(file_path, "wb")
+            while True:
+                buffer = response.read(block_size)
+                if not buffer:
+                    break
+
+                file_size_downloaded += len(buffer)
+                file.write(buffer)
+            file.close()
+
+            print("OK\n")
+            return
+        except Exception as e:
+            print("Exception thrown, retrying: " + str(e))
+            current_try += 1
+            continue
+    raise Exception("Retries reached exceeded maximum value.")
 
 
 def main():
