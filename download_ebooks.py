@@ -22,6 +22,8 @@ def retry(function, how_many, *arguments):
                 # noinspection PyBroadException
                 try:
                     return function(*arguments)
+                except KeyboardInterrupt as e:
+                    raise e
                 except:
                     attempts += 1
             raise Exception("Number of attempts exceeded maximum value.")
