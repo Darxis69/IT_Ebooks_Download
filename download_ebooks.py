@@ -69,7 +69,10 @@ def get_download_size_string(size_in_bytes):
 
 
 def replace_invalid_path_characters(path):
-    return path.replace(':', ' -').replace('/', '_')
+    path = path.replace(':', ' -').replace('/', '_').replace('\\', '_')
+    path = path.replace('*', '').replace('?', '').replace('"', '\'')
+    path = path.replace('<', '').replace('>', '').replace('|', '')
+    return path
 
 
 def unescape_html_string(html_encoded_string):
@@ -143,5 +146,6 @@ def main():
             retry(download_ebook_by_id, max_retries, ebook_id, ebook_dir_path)
         else:
             print("Ebook ID " + str(ebook_id) + " doesn't exists.")
+
 
 main()
