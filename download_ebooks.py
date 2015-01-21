@@ -3,6 +3,7 @@ import os
 import urllib.request
 import urllib.error
 import socket
+import html
 
 from lxml import etree
 
@@ -71,6 +72,10 @@ def replace_invalid_path_characters(path):
     return path.replace(':', ' -').replace('/', '_')
 
 
+def unescape_html_string(html_encoded_string):
+    return html.unescape(html_encoded_string)
+
+
 def download_ebook_by_id(ebook_id, directory):
     download_url = get_ebook_download_link(ebook_id)
     request = urllib.request.Request(download_url)
@@ -82,6 +87,7 @@ def download_ebook_by_id(ebook_id, directory):
 
     extract_file_name_re = re.compile(r'"(.*?)"')
     file_name = extract_file_name_re.findall(content_disposition_header_value)[0]
+    file_name = unescape_html_string(file_name)
     file_name = replace_invalid_path_characters(file_name)
     file_path = directory + file_name
 
