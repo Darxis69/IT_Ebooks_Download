@@ -1,3 +1,4 @@
+from datetime import datetime
 import re
 import os
 import urllib.request
@@ -57,7 +58,7 @@ def get_ebook_download_link(ebook_id):
     return download_url
 
 
-def get_download_size_string(size_in_bytes):
+def get_size_string(size_in_bytes):
     size = size_in_bytes
     size_suffixes = ["B", "KB", "MB", "GB", "TB", "PB"]
     size_suffix_index = 0
@@ -95,7 +96,7 @@ def download_ebook_by_id(ebook_id, directory):
     file_path = directory + file_name
 
     print("Ebook ID: " + str(
-        ebook_id) + ". File name: '" + file_name + "'. File size: " + get_download_size_string(
+        ebook_id) + ". File name: '" + file_name + "'. File size: " + get_size_string(
         file_size))
     print('Downloading... ', end="", flush=True)
 
@@ -103,6 +104,7 @@ def download_ebook_by_id(ebook_id, directory):
     block_size = 8192
 
     file = open(file_path, "wb")
+    download_start_time = datetime.now()
     while True:
         buffer = response.read(block_size)
         if not buffer:
@@ -110,8 +112,11 @@ def download_ebook_by_id(ebook_id, directory):
 
         file_size_downloaded += len(buffer)
         file.write(buffer)
+    download_end_time = datetime.now()
+    download_time_in_seconds = (download_end_time - download_start_time).seconds
+    average_download_speed = file_size / download_time_in_seconds
     file.close()
-    print("OK\n")
+    print("OK. Average download speed: " + get_size_string(average_download_speed) + "/s.\n")
 
 
 def ebook_exists(ebook_id):
