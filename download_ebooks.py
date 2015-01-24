@@ -9,7 +9,7 @@ import html
 from lxml import etree
 
 
-base_url = "http://www.it-ebooks.info/"
+base_url = "http://www.it-ebooks.info"
 root_directory = "ebooks/"
 max_retries = 2 ** 64
 default_timeout = 10
@@ -46,7 +46,7 @@ def get_max_ebook_id():
 
 
 def get_ebook_url_by_id(ebook_id):
-    return base_url + "book/" + str(ebook_id) + "/"
+    return base_url + "/book/" + str(ebook_id)
 
 
 def get_ebook_download_link(ebook_id):
@@ -80,8 +80,22 @@ def unescape_html_string(html_encoded_string):
     return html.unescape(html_encoded_string)
 
 
+def get_file_name_from_content_disposition_header(content_disposition_header_value):
+    extract_file_name_re = re.compile(r'"(.*?)"')
+    values = extract_file_name_re.findall(content_disposition_header_value)
+    if len(values) > 0:
+        return values[0]
+    extract_file_name_re = re.compile(r'=([^=]*)$')
+    values = extract_file_name_re.findall(content_disposition_header_value)
+    if len(values) > 0:
+        return values[0]
+    raise Exception("Cannot extract file name from Content-disposition header.")
+
+
 def download_ebook_by_id(ebook_id, directory):
     download_url = get_ebook_download_link(ebook_id)
+    if download_url.startswith("/"):
+        download_url = base_url + download_url
     request = urllib.request.Request(download_url)
     request.add_header('Referer', get_ebook_url_by_id(ebook_id))
     response = urllib.request.urlopen(request, timeout=default_timeout)
@@ -89,8 +103,7 @@ def download_ebook_by_id(ebook_id, directory):
     content_disposition_header_value = response.getheader("Content-disposition")
     file_size = int(response.getheader("Content-Length"))
 
-    extract_file_name_re = re.compile(r'"(.*?)"')
-    file_name = extract_file_name_re.findall(content_disposition_header_value)[0]
+    file_name = get_file_name_from_content_disposition_header(content_disposition_header_value)
     file_name = unescape_html_string(file_name)
     file_name = replace_invalid_path_characters(file_name)
     file_path = directory + file_name
@@ -108,6 +121,8 @@ def download_ebook_by_id(ebook_id, directory):
     while True:
         buffer = response.read(block_size)
         if not buffer:
+            if file_size_downloaded != file_size:
+                raise Exception("Invalid downloaded file size.")
             break
 
         file_size_downloaded += len(buffer)
